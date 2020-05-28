@@ -14,7 +14,7 @@
 {-# Language TemplateHaskell #-}
 {-# Language TypeOperators #-}
 
-import EVM.Concrete (w256)
+import EVM.Concrete (w256, litWord)
 
 import qualified EVM as EVM
 import qualified EVM.FeeSchedule as FeeSchedule
@@ -349,10 +349,10 @@ equivalenceCheck cmd =
          bytecodeB = hexByteString "--code" . strip0x $ codeB cmd
          Just types = parseFunArgs =<< funcSig cmd
      void . runSMT . query $ do
-           input <- symAbiArg types
+           (input, len) <- symAbiArg types
            let calldata' = litBytes (sig $ fromMaybe (error "no funcsig given") (funcSig cmd)) <> input
            symstore <- freshArray_ Nothing
-           let (preStateA, preStateB) = both' (\x -> loadSymVM x symstore calldata') (bytecodeA, bytecodeB)
+           let (preStateA, preStateB) = both' (\x -> loadSymVM x symstore (calldata', 4 + len)) (bytecodeA, bytecodeB)
            smtState <- queryState
            (aRes, bRes) <- both (\x -> io $ fst <$> runStateT (interpret (EVM.Fetch.oracle smtState) EVM.Stepper.runFully) x) (preStateA, preStateB)
            resetAssertions
@@ -398,10 +398,10 @@ assert cmd =
      then do let root = fromMaybe "." (dappRoot cmd)
                  srcinfo = ((,) root) <$> (jsonFile cmd)
                  Just types = parseFunArgs =<< funcSig cmd
-             void . runSMT . query $ do input <- symAbiArg types
+             void . runSMT . query $ do (input, len) <- symAbiArg types
                                         let calldata' = litBytes (sig $ fromMaybe (error "no funcsig given") (funcSig cmd)) <> input
                                         symstore <- freshArray_ Nothing
-                                        let preState = loadSymVM bytecode symstore calldata'
+                                        let preState = loadSymVM bytecode symstore (calldata', len + 4)
                                         smtState <- queryState
                                         io $ EVM.TTY.runFromVM srcinfo (EVM.Fetch.oracle smtState) preState
 
@@ -558,11 +558,12 @@ vmFromCommand cmd = do
         address' = if create cmd
               then createAddress origin' (word nonce 0)
               else addr address 0xacab
-    
+        cddata = maybe [] (litBytes . (hexByteString "--calldata") . strip0x)
+                      (calldata cmd)
+        calldata' = (cddata, litWord . num $ length cddata)
         vm1 c = EVM.makeVm $ EVM.VMOpts
           { EVM.vmoptContract      = c
-          , EVM.vmoptCalldata      = maybe [] (litBytes . (hexByteString "--calldata") . strip0x)
-                                       (calldata cmd)
+          , EVM.vmoptCalldata      = calldata'
           , EVM.vmoptValue         = value'
           , EVM.vmoptAddress       = address'
           , EVM.vmoptCaller        = caller'
