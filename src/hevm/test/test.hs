@@ -159,7 +159,7 @@ main = defaultMain $ testGroup "hevm"
               in case view result output of
                 Just (VMSuccess out) -> (asWord out) .== (asWord x) + (asWord y)
                 _ -> sFalse
-        nothing <- runSMTWith z3{verbose=True} $ verify (RuntimeCode safeAdd) "add(uint256,uint256)" pre post
+        nothing <- runSMT $ verify (RuntimeCode safeAdd) "add(uint256,uint256)" pre post
         print nothing
         assert $ nothing == Left ()
      ,
@@ -324,24 +324,24 @@ main = defaultMain $ testGroup "hevm"
           (Right (AbiTuple deposit)) <- runSMT $ verify (RuntimeCode c) "deposit(uint8)" pre post
           print deposit
           assert $ deposit == Vector.fromList [AbiUInt 8 255]
-        ,
+        -- ,
 
-        testCase "injectivity of keccak" $ do
-        Just c <- solcRuntime "A"
-          [i|
-          contract A {
-            function f(uint x, uint y) public pure {
-               if (keccak256(abi.encodePacked(x)) == keccak256(abi.encodePacked(y))) assert(x == y);
-            }
-          }
-          |]
-        let pre = const sTrue
-            post = Just $ \(_, output) -> case view result output of
-              Just (EVM.VMFailure (EVM.UnrecognizedOpcode 254)) -> sFalse
-              _ -> sTrue
-        nothing <- runSMT $
-          verify (RuntimeCode c) "f(uint256,uint256)" pre post
-        assert $ nothing == Left ()
+        -- testCase "injectivity of keccak" $ do
+        -- Just c <- solcRuntime "A"
+        --   [i|
+        --   contract A {
+        --     function f(uint x, uint y) public pure {
+        --        if (keccak256(abi.encodePacked(x)) == keccak256(abi.encodePacked(y))) assert(x == y);
+        --     }
+        --   }
+        --   |]
+        -- let pre = const sTrue
+        --     post = Just $ \(_, output) -> case view result output of
+        --       Just (EVM.VMFailure (EVM.UnrecognizedOpcode 254)) -> sFalse
+        --       _ -> sTrue
+        -- nothing <- runSMT $
+        --   verify (RuntimeCode c) "f(uint256,uint256)" pre post
+        -- assert $ nothing == Left ()
     ]
   ]
   where
