@@ -29,6 +29,7 @@ import Control.Monad.Par.IO (runParIO)
 
 import qualified Data.ByteString.Lazy as BSLazy
 import Data.ByteString    (ByteString)
+import Data.SBV
 import Data.Foldable      (toList)
 import Data.Map           (Map)
 import Data.Maybe         (fromMaybe, catMaybes, fromJust, isJust, fromMaybe, mapMaybe)
@@ -607,7 +608,7 @@ setupCall params target sig args  = do
   let TestVMParams {..} = params
   resetState
   loadContract target
-  assign (state . calldata) $ (litBytes $ abiMethod sig args, litWord . num . BS.length $ abiMethod sig args)
+  assign (state . calldata) $ (litBytes $ abiMethod sig args, literal . num . BS.length $ abiMethod sig args)
   assign (state . caller) testCaller
   assign (state . gas) (w256 testGasCall)
 
