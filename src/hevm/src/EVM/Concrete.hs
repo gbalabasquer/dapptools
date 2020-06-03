@@ -10,7 +10,7 @@ import Prelude hiding (Word, (^))
 
 import EVM.Keccak (keccak)
 import EVM.RLP
-import EVM.Types (Addr, W256 (..), num, toWord512, fromWord512, fromSizzle, toSizzle)
+import EVM.Types (Addr(..), SAddr(..), W256 (..), num, toWord512, fromWord512, fromSizzle, toSizzle)
 import EVM.Types (word, padRight, word160Bytes, word256Bytes, truncpad)
 
 import Control.Lens    ((^?), ix)
@@ -70,6 +70,8 @@ litWord (C whiff a) = S whiff (literal $ toSizzle a)
 maybeLitWord :: SymWord -> Maybe Word
 maybeLitWord (S whiff a) = fmap (C whiff . fromSizzle) (unliteral a)
 
+maybeLitAddr :: SAddr -> Maybe Addr
+maybeLitAddr (SAddr a) = fmap fromSizzle (unliteral a)
 
 w256lit :: W256 -> SymWord
 w256lit = S Dull . literal . toSizzle
