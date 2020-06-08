@@ -1,12 +1,12 @@
 { lib, stdenv, fetchFromGitHub, makeWrapper, glibcLocales
-, bc, coreutils, curl, ethsign, git, gnused, jshon, nodejs, perl }:
+, bc, coreutils, curl, ethsign, git, gnused, jshon, nodejs, perl, shellcheck }:
 
 stdenv.mkDerivation rec {
   name = "seth-${version}";
   version = "0.8.4";
   src = ./.;
 
-  nativeBuildInputs = [makeWrapper];
+  nativeBuildInputs = [makeWrapper shellcheck];
   buildPhase = "true";
   doCheck = true;
   checkPhase = "make test";
