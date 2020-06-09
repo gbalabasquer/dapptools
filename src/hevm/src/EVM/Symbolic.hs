@@ -203,7 +203,10 @@ checkAssert code maxIter signature' = let post = Just $ \(_, output) ->
 
 verify :: ContractCode -> Maybe Integer -> Maybe Text -> Precondition -> Maybe Postcondition -> Query (Either (VM, [VM]) ByteString)
 verify (RuntimeCode runtimecode) maxIter signature' pre maybepost = do
-    preState <- abstractVM signature' runtimecode
+    preStateRaw <- abstractVM signature' runtimecode
+    let args = drop 4 $ fst $ view (state . calldata) preStateRaw
+    -- add the pre condition to the pathconditions to ensure that we are only exploring valid paths
+    let preState = over pathConditions ((++) [pre args]) preStateRaw
     smtState <- queryState
     results <- io $ fst <$> runStateT (interpret (Fetch.oracle smtState Nothing) maxIter Stepper.runFully) preState
     case (maybepost, results) of
