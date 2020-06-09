@@ -227,4 +227,4 @@ verify (RuntimeCode runtimecode) maxIter signature' pre maybepost = do
                                                return $ Right (pack model)
       (Nothing, Right res) -> do io $ print "Q.E.D"
                                  return $ Left (preState, res)
-      (Nothing, Left _) -> error "unexpected error during symbolic execution"
+      (_, Left _) -> error "unexpected error during symbolic execution"
