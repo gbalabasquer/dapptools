@@ -4,13 +4,14 @@
       (builtins.map
         (x: {
           "${x.name}/" = "${x}/dapp/${x.name}/src/";
+          "${x.name}" = "${x}/dapp/${x.name}/src/index.sol";
          } // x.remappings)
          xs);
   libPaths = xs:
     builtins.foldl' pkgs.lib.mergeAttrs {}
       (builtins.map
         (x: {
-          "${x.name}" = "${x}/dapp/${x.name}/src";
+          "${x.name}" = "${x}/dapp/${x.name}";
          } // x.libPaths)
          xs);
 in
@@ -24,8 +25,9 @@ in
     , ...
     } @ attrs:
       pkgs.stdenv.mkDerivation (rec {
-        inherit doCheck;
-        buildInputs = [ test-hevm solc ];
+        inherit doCheck extract;
+        buildInputs = [ solc pkgs.jq ]
+          ++ (pkgs.lib.optional (test-hevm != null) test-hevm);
         passthru = {
           remappings = remappings deps;
           libPaths = libPaths deps;
