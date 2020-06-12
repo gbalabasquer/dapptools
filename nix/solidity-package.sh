@@ -1,23 +1,24 @@
 source $stdenv/setup
 unpackPhase
 
-jsonopts=--combined-json=abi,bin,bin-runtime,srcmap,srcmap-runtime,ast,metadata
+dir="$out/dapp/$name"
+opts=(--combined-json=abi,bin,bin-runtime,srcmap,srcmap-runtime,ast,metadata --overwrite)
 
-export DAPP_SRC=$src
-export DAPP_OUT=out
+mkdir -p "$dir"
+cd "$dir"
 
-mkdir -p "$DAPP_OUT"
-mapfile -t files < <(find "${DAPP_SRC}" -name '*.sol')
-json_file="$DAPP_OUT/dapp.sol.json"
-(set -x; solc "$REMAPPINGS" "$jsonopts" "$solcFlags" /=/ "${files[@]}" > "$json_file")
+cp -r "$src" src
 
-mkdir lib
-echo "$LIBSCRIPT" > setup.sh
-source setup.sh
-export DAPP_LIB=lib
+mkdir -p lib
+source <(echo "$LIBSCRIPT")
 
-if [ "$doCheck" == 1 ]; then
-  dapp2-test-hevm
+mkdir -p out
+mapfile -t files < <(find "$dir/src" -name '*.sol')
+json_file="out/dapp.sol.json"
+(set -x; solc $REMAPPINGS "${opts[@]}" $solcFlags "${files[@]}" > "$json_file")
+
+if [[ "$doCheck" == 1 ]] && command -v dapp2-test-hevm >/dev/null 2>&1; then
+  DAPP_OUT=out dapp2-test-hevm
 fi
 
 if [ "$extract" == 1 ]; then
@@ -27,15 +28,10 @@ if [ "$extract" == 1 ]; then
   echo "Extracting build data... [Total: $total]"
   for path in "${contracts[@]}"; do
     fileName="${path#*:}"
-    contract=$(echo "$data" | jq '.[''"'"$path"'"'']')
-    echo "$contract" | jq '.["abi"]' -r > "$DAPP_OUT/$fileName.abi"
-    echo "$contract" | jq '.["bin"]' -r > "$DAPP_OUT/$fileName.bin"
-    echo "$contract" | jq '.["bin-runtime"]' -r > "$DAPP_OUT/$fileName.bin-runtime"
-    echo "$contract" | jq '.["metadata"]' -r > "$DAPP_OUT/$fileName.metadata"
+    contract=$(echo "$data" | jq '.["'"$path"'"]')
+    echo "$contract" | jq '.["abi"]' -r > "out/$fileName.abi"
+    echo "$contract" | jq '.["bin"]' -r > "out/$fileName.bin"
+    echo "$contract" | jq '.["bin-runtime"]' -r > "out/$fileName.bin-runtime"
+    echo "$contract" | jq '.["metadata"]' -r > "out/$fileName.metadata"
   done
 fi
-
-mkdir -p "$out/dapp/$fileName"
-cp -r "$src" "$out/dapp/$fileName/src"
-cp -r lib "$out/dapp/$fileName/lib"
-cp -r out "$out/dapp/$fileName/out"
